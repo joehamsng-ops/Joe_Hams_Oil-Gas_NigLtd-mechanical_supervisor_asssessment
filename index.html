@@ -1,0 +1,399 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mechanical Supervisor Assessment</title>
+<style>
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f3f5f8;
+  color: #202b3c;
+}
+.container {
+  max-width: 760px;
+  margin: 35px auto;
+  padding: 25px;
+}
+.card {
+  background: white;
+  padding: 28px;
+  border-radius: 14px;
+  box-shadow: 0 4px 18px rgba(0,0,0,.07);
+}
+h1 { font-size: 24px; margin-top: 0; }
+.subtitle { color: #687386; line-height: 1.5; }
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin: 22px 0;
+}
+.timer {
+  background: #fff0e8;
+  color: #b44715;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-weight: bold;
+}
+.progress {
+  height: 8px;
+  background: #e5e9ef;
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 18px 0;
+}
+.progress div {
+  height: 100%;
+  width: 0;
+  background: #1769aa;
+}
+.question-number { color: #1769aa; font-weight: bold; }
+.question { font-size: 19px; line-height: 1.5; }
+.option {
+  display: block;
+  border: 1px solid #dce2e9;
+  border-radius: 9px;
+  padding: 14px;
+  margin: 11px 0;
+  cursor: pointer;
+}
+.option:has(input:checked) {
+  border-color: #1769aa;
+  background: #edf6ff;
+}
+.option input { margin-right: 10px; }
+.buttons {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 25px;
+}
+button {
+  border: none;
+  border-radius: 8px;
+  padding: 13px 22px;
+  cursor: pointer;
+  font-weight: bold;
+}
+button:disabled { opacity: .4; cursor: not-allowed; }
+.primary { background: #1769aa; color: white; }
+.secondary { background: #e9edf2; color: #263548; }
+#status { margin-top: 18px; line-height: 1.5; }
+.hidden { display: none; }
+@media(max-width:600px) {
+  .container { margin: 10px auto; padding: 12px; }
+  .card { padding: 19px; }
+  .question { font-size: 17px; }
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+  <div class="card">
+    <h1>Mechanical Supervisor Assessment</h1>
+    <p class="subtitle">
+      Oil & Gas Recruitment Assessment<br>
+      You have 10 minutes to answer 15 questions.
+      Each question carries one mark.
+    </p>
+
+    <div id="welcome">
+      <p>Please ensure you have a stable internet connection.
+      Once you begin, your assessment timer will start.</p>
+      <button class="primary" id="startButton">Start Assessment</button>
+    </div>
+
+    <div id="assessment" class="hidden">
+      <div class="topbar">
+        <strong id="counter">Question 1 of 15</strong>
+        <div class="timer" id="timer">10:00</div>
+      </div>
+
+      <div class="progress"><div id="progressBar"></div></div>
+
+      <p class="question-number" id="category"></p>
+      <h2 class="question" id="questionText"></h2>
+      <div id="options"></div>
+
+      <div class="buttons">
+        <button class="secondary" id="previousButton">Previous</button>
+        <button class="primary" id="nextButton">Next</button>
+        <button class="primary hidden" id="submitButton">Submit Assessment</button>
+      </div>
+    </div>
+
+    <div id="status"></div>
+  </div>
+</div>
+
+<script>
+const START_WEBHOOK_URL = "https://hamcroft.app.n8n.cloud/webhook/start-assessment";
+const SUBMIT_WEBHOOK_URL = "https://hamcroft.app.n8n.cloud/webhook/submit-assessment";
+
+const params = new URLSearchParams(window.location.search);
+const applicantId = params.get("applicantId");
+
+const questions = [
+  {
+    category: "Mechanical Maintenance",
+    question: "What is a common indication of cavitation in a centrifugal pump?",
+    options: ["Smooth and silent operation", "Excessive noise, vibration and reduced flow", "Increased lubrication pressure", "Lower motor temperature"]
+  },
+  {
+    category: "Mechanical Maintenance",
+    question: "What is the main purpose of preventive maintenance?",
+    options: ["To repair equipment only after failure", "To replace all equipment annually", "To reduce equipment failure through planned maintenance", "To eliminate the need for inspections"]
+  },
+  {
+    category: "Mechanical Maintenance",
+    question: "A mechanical bearing is overheating. Which should be investigated first?",
+    options: ["Lubrication condition and bearing alignment", "Paint thickness", "Equipment colour", "Ambient lighting"]
+  },
+  {
+    category: "Mechanical Maintenance",
+    question: "A rotating machine suddenly develops excessive vibration. What should the supervisor do first?",
+    options: ["Increase its operating speed", "Ignore it until the next maintenance schedule", "Assess the risk and arrange a safe inspection or shutdown as required", "Apply more paint to the machine"]
+  },
+  {
+    category: "Mechanical Maintenance",
+    question: "Which factor should be most important when prioritising maintenance activities?",
+    options: ["The age of the maintenance technician", "Equipment criticality, safety and operational risk", "The colour of the equipment", "The number of workers available for overtime"]
+  },
+  {
+    category: "Oil & Gas Equipment",
+    question: "What is compressor surge?",
+    options: ["Normal compressor operation at maximum efficiency", "Unstable flow that can cause flow reversal and damaging pressure fluctuations", "A method of cleaning compressor filters", "An increase in lubrication quality"]
+  },
+  {
+    category: "Oil & Gas Equipment",
+    question: "What is the primary function of a Pressure Safety Valve (PSV)?",
+    options: ["To increase pipeline pressure", "To regulate electrical current", "To protect equipment against excessive pressure", "To measure fluid temperature"]
+  },
+  {
+    category: "Oil & Gas Equipment",
+    question: "Before opening a pressurised pipeline strainer for maintenance, what must be done?",
+    options: ["Increase the operating pressure", "Isolate, depressurise, drain and verify safe conditions", "Remove the bolts immediately", "Switch off nearby lighting only"]
+  },
+  {
+    category: "Oil & Gas Equipment",
+    question: "A flange connection develops a hydrocarbon leak. What is the safest response?",
+    options: ["Tighten the flange bolts while it remains pressurised", "Apply sealant while the system is operating", "Raise the alarm and follow the site's emergency and isolation procedures", "Ignore the leak if it is small"]
+  },
+  {
+    category: "Health, Safety and Environment",
+    question: "What is the main purpose of a Permit to Work (PTW) system?",
+    options: ["To record employees' salaries", "To authorise and control potentially hazardous work", "To replace all safety training", "To increase production speed"]
+  },
+  {
+    category: "Health, Safety and Environment",
+    question: "What is the purpose of a Job Safety Analysis (JSA)?",
+    options: ["To identify job hazards and establish appropriate control measures", "To calculate equipment depreciation", "To determine workers' annual leave", "To measure production output"]
+  },
+  {
+    category: "Health, Safety and Environment",
+    question: "What should a worker do after applying Lockout/Tagout (LOTO) to equipment?",
+    options: ["Assume the equipment is safe without checking", "Verify that hazardous energy has been isolated and the equipment is in a zero-energy state", "Immediately restart the equipment", "Remove another worker's lock"]
+  },
+  {
+    category: "Health, Safety and Environment",
+    question: "What is an essential precaution before entering a confined space?",
+    options: ["Enter immediately if the space looks clean", "Rely only on another worker's assurance", "Obtain required authorisation, conduct atmospheric testing and establish the required controls", "Switch off the communication system"]
+  },
+  {
+    category: "Supervisory Skills",
+    question: "What should a Mechanical Supervisor do before assigning a high-risk maintenance task?",
+    options: ["Start the job immediately to save time", "Conduct a pre-job briefing, confirm permits, hazards, controls and responsibilities", "Allow workers to decide all safety procedures themselves", "Skip the inspection if the team is experienced"]
+  },
+  {
+    category: "Supervisory Skills",
+    question: "If a worker identifies an unsafe condition during maintenance, what should the supervisor do?",
+    options: ["Encourage the worker to continue", "Ignore the concern to meet the deadline", "Stop or suspend the affected work and ensure the hazard is assessed and controlled", "Ask the worker to keep quiet"]
+  }
+];
+
+let answers = {};
+let currentQuestion = 0;
+let sessionId = null;
+let expiryTime = null;
+let timerInterval = null;
+let submitting = false;
+
+const $ = id => document.getElementById(id);
+
+function showStatus(message) {
+  $("status").textContent = message;
+}
+
+function renderQuestion() {
+  const q = questions[currentQuestion];
+
+  $("counter").textContent =
+    `Question ${currentQuestion + 1} of ${questions.length}`;
+
+  $("category").textContent = q.category;
+  $("questionText").textContent = q.question;
+
+  $("progressBar").style.width =
+    `${((currentQuestion + 1) / questions.length) * 100}%`;
+
+  $("options").innerHTML = "";
+
+  q.options.forEach((option, index) => {
+    const label = document.createElement("label");
+    label.className = "option";
+
+    const radio = document.createElement("input");
+    radio.type = "radio";
+    radio.name = "answer";
+    radio.value = String.fromCharCode(65 + index);
+    radio.checked = answers[currentQuestion] === radio.value;
+
+    radio.addEventListener("change", () => {
+      answers[currentQuestion] = radio.value;
+    });
+
+    label.appendChild(radio);
+    label.appendChild(document.createTextNode(
+      `${String.fromCharCode(65 + index)}. ${option}`
+    ));
+
+    $("options").appendChild(label);
+  });
+
+  $("previousButton").disabled = currentQuestion === 0;
+  $("nextButton").classList.toggle(
+    "hidden", currentQuestion === questions.length - 1
+  );
+  $("submitButton").classList.toggle(
+    "hidden", currentQuestion !== questions.length - 1
+  );
+}
+
+function updateTimer() {
+  const remaining = Math.max(
+    0, Math.ceil((expiryTime - Date.now()) / 1000)
+  );
+
+  const minutes = Math.floor(remaining / 60);
+  const seconds = remaining % 60;
+
+  $("timer").textContent =
+    `${String(minutes).padStart(2,"0")}:${String(seconds).padStart(2,"0")}`;
+
+  if (remaining <= 0) {
+    clearInterval(timerInterval);
+    submitAssessment(true);
+  }
+}
+
+async function startAssessment() {
+  if (!applicantId) {
+    showStatus("Applicant ID is missing. Please use the assessment link provided in your invitation.");
+    return;
+  }
+
+  $("startButton").disabled = true;
+  showStatus("Starting your assessment...");
+
+  try {
+    const response = await fetch(START_WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ applicantId })
+    });
+
+    if (!response.ok) throw new Error("Could not start assessment.");
+
+    const data = await response.json();
+
+    sessionId = data.sessionId;
+    expiryTime = new Date(data.expiryTime).getTime();
+
+    if (!sessionId || !Number.isFinite(expiryTime)) {
+      throw new Error("The assessment session response was incomplete.");
+    }
+
+    $("welcome").classList.add("hidden");
+    $("assessment").classList.remove("hidden");
+
+    renderQuestion();
+    updateTimer();
+    timerInterval = setInterval(updateTimer, 1000);
+    showStatus("");
+  } catch (error) {
+    $("startButton").disabled = false;
+    showStatus("Unable to start. Please check your connection and try again.");
+  }
+}
+
+async function submitAssessment(autoSubmit = false) {
+  if (submitting) return;
+
+  if (!autoSubmit && !confirm("Are you sure you want to submit your assessment?")) {
+    return;
+  }
+
+  submitting = true;
+  clearInterval(timerInterval);
+
+  $("previousButton").disabled = true;
+  $("nextButton").disabled = true;
+  $("submitButton").disabled = true;
+
+  showStatus(autoSubmit
+    ? "Time is up. Submitting your answers..."
+    : "Submitting your assessment..."
+  );
+
+  try {
+    const response = await fetch(SUBMIT_WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        applicantId,
+        sessionId,
+        answers,
+        autoSubmitted: autoSubmit
+      })
+    });
+
+    if (!response.ok) throw new Error("Submission failed.");
+
+    $("assessment").classList.add("hidden");
+    showStatus("Your assessment has been submitted successfully. Thank you.");
+  } catch (error) {
+    submitting = false;
+    $("previousButton").disabled = currentQuestion === 0;
+    $("nextButton").disabled = false;
+    $("submitButton").disabled = false;
+    showStatus("Submission could not be confirmed. Please contact the recruitment team. Do not start another session.");
+  }
+}
+
+$("startButton").addEventListener("click", startAssessment);
+
+$("previousButton").addEventListener("click", () => {
+  if (currentQuestion > 0) {
+    currentQuestion--;
+    renderQuestion();
+  }
+});
+
+$("nextButton").addEventListener("click", () => {
+  if (currentQuestion < questions.length - 1) {
+    currentQuestion++;
+    renderQuestion();
+  }
+});
+
+$("submitButton").addEventListener("click", () => submitAssessment(false));
+</script>
+</body>
+</html>
+
