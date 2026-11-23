@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mechanical Supervisor Assessment</title>
+<title>Joe Hams Autos Oil & Gas - Mechanical Supervisor Assessment</title>
 <style>
 * { box-sizing: border-box; }
 body {
@@ -96,9 +96,10 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 <body>
 <div class="container">
   <div class="card">
-    <h1>Mechanical Supervisor Assessment</h1>
+   <h1>Joe Hams Autos Oil & Gas</h1>
+<h2>Mechanical Supervisor Assessment</h2>
+
     <p class="subtitle">
-      Oil & Gas Recruitment Assessment<br>
       You have 10 minutes to answer 15 questions.
       Each question carries one mark.
     </p>
@@ -389,6 +390,7 @@ $("nextButton").addEventListener("click", () => {
   if (currentQuestion < questions.length - 1) {
     currentQuestion++;
     renderQuestion();
+
   }
 });
 
@@ -396,4 +398,3 @@ $("submitButton").addEventListener("click", () => submitAssessment(false));
 </script>
 </body>
 </html>
-
